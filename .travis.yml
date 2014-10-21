@@ -1,4 +1,12 @@
 language: python
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -y libxml2-dev
+- sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends curl ca-certificates
+- sudo curl -s -o /tmp/influxdb_latest_amd64.deb https://s3.amazonaws.com/influxdb/influxdb_latest_amd64.deb
+- sudo dpkg -i /tmp/influxdb_latest_amd64.deb
+- sudo rm /tmp/influxdb_latest_amd64.deb
+- sudo rm -rf /var/lib/apt/lists/*
 python:
 - 'pypy3'
 - 'pypy'
