@@ -9,7 +9,7 @@ before_install:
 - sudo rm -rf /var/lib/apt/lists/*
 before_script:
 - sudo service influxdb start
-- sudo curl -v -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "test"}'
+- "sudo curl -v -X POST 'http://localhost:8086/db?u=root&p=root' -d '{\"name\": \"test\"}'"
 python:
 - '2.7'
 install:
