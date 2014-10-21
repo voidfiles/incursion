@@ -12,11 +12,11 @@ Incursion: InfluxDB for Developers
 
 Incursion is an MIT Licensed InfluxDB client, written in Python, for developers.
 
-This existing InfluxDB python client is great. This client is built on
-that one but, many python developers have come to expect a progrmatic
+The existing InfluxDB python client is great. This client is built on
+that but many python developers have come to expect a programmatic
 method for building queries on top of a raw unstructured query interface.
 
-Incursion was bult to bring a new pattern to your InfluxDB Queries.
+Incursion was built to bring a new pattern to your InfluxDB Queries.
 
 .. code-block:: pycon
 
@@ -67,7 +67,7 @@ Contribute
 
 #. Fork `the repository`_ on GitHub to start making your changes to the **master** branch (or branch off of it).
 #. Write a test which shows that the bug was fixed or that the feature works as expected.
-#. Send a pull request. :) Make sure to add yourself to AUTHORS_.
+#. Send a pull request :) Make sure to add yourself to AUTHORS_.
 
 .. _`the repository`: http://github.com/voidfiles/incursion
 .. _AUTHORS: https://github.com/kennethreitz/requests/blob/master/AUTHORS.rst
