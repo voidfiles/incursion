@@ -8,11 +8,6 @@ before_install:
 - sudo rm /tmp/influxdb_latest_amd64.deb
 - sudo rm -rf /var/lib/apt/lists/*
 python:
-- 'pypy3'
-- 'pypy'
-- '3.4'
-- '3.3'
-- '3.2'
 - '2.7'
 install:
 - travis_retry pip install -r requirements.txt
