@@ -17,6 +17,7 @@ def geneate_points(from_date, to_date, interval, amount):
     return data
 
 
+@unittest.skip("skipping untill we get influxdb on travis ci")
 class TestResponseParser(unittest.TestCase):
     def setUp(self):
         self.client = InfluxDBClient('127.0.0.1', 8086, 'root', 'root')
