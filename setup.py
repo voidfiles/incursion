@@ -39,7 +39,7 @@ setup(
     author_email='voidfiles@gmail.com',
     url='http://github.com/voidfiles/incursion',
     packages=packages,
-    package_data={'': ['LICENSE', 'NOTICE']},
+    package_data={'': ['LICENSE', 'requirements.txt']},
     package_dir={'incursion': 'incursion'},
     include_package_data=True,
     install_requires=requires,

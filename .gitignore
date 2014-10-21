@@ -1,1 +1,4 @@
 *.pyc
+incursion.egg-info
+dist
+*.DS_Store

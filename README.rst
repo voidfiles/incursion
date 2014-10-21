@@ -1,12 +1,14 @@
 Incursion: InfluxDB for Developers
 ==================================
 
-.. image:: https://badge.fury.io/py/requests.png
-    :target: http://badge.fury.io/py/requests
+.. image:: https://badge.fury.io/py/incursion.png
+    :target: http://badge.fury.io/py/incursion
 
-.. image:: https://pypip.in/d/requests/badge.png
-        :target: https://crate.io/packages/requests/
+.. image:: https://pypip.in/d/incursion/badge.png
+        :target: https://crate.io/packages/incursion/
 
+.. image:: https://travis-ci.org/voidfiles/incursion.png
+        :target: https://travis-ci.org/voidfiles/incursion
 
 Incursion is an MIT Licensed InfluxDB client, written in Python, for developers.
 
