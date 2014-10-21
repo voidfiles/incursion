@@ -56,6 +56,11 @@ To install Incursion, simply:
 
     $ pip install incursion
 
+Future Features
+---------------
+
+- Continuous Query Manager (fanouts and downsampling)
+- In-app joining fanout query results to source series results
 
 Contribute
 ----------
