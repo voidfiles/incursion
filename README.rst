@@ -70,4 +70,4 @@ Contribute
 #. Send a pull request :) Make sure to add yourself to AUTHORS_.
 
 .. _`the repository`: http://github.com/voidfiles/incursion
-.. _AUTHORS: https://github.com/kennethreitz/requests/blob/master/AUTHORS.rst
+.. _AUTHORS: https://github.com/voidfiles/incursion/blob/master/AUTHORS.rst
