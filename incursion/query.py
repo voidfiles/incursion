@@ -155,6 +155,10 @@ class InfluxQuery(object):
         return 'time(%s)' % (time_expression)
 
     @staticmethod
+    def now_minus(time_expression):
+        return TimeString('now() - %s' % (time_expression))
+
+    @staticmethod
     def time_value(time_expression):
         return TimeString(time_expression)
 
@@ -219,6 +223,8 @@ class InfluxQuery(object):
 
     def into(self, pattern):
         self.into_pattern = pattern
+
+        return self
 
     def _query_columns(self):
         if not self.column_clauses:
