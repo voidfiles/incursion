@@ -63,6 +63,8 @@ class InfluxDBContinuousQuery(object):
 def sync_continuous_queries(client, queries, recreate=False):
     response = client.query('list continuous queries')
     series = response[0]
+    print series['columns']
+    print series['points']
     id_by_query = {p[3]: p[2] for p in series['points']}
 
     for q in queries:
