@@ -1,4 +1,8 @@
+from collections import namedtuple
+
 from .query import InfluxQuery
+
+FanoutQuery = namedtuple('FanoutQuery', 'fanout_on columns_to_copy')
 
 
 class ContinuousQueryException(Exception):
@@ -10,27 +14,27 @@ class InfluxDBContinuousQuery(object):
     fanouts = {}
     downsample_interval = ['1m', '1h', '1d']
 
-    def sync():
-        # This will make sure the correct continuous queries are running
-        pass
-
-    def queries_for_sync(self):
+    def continuous_queries(self):
         queries = []
-        for fanout, sections in self.fanouts.iteritems():
+        for fanout, fanout_query in self.fanouts.iteritems():
             series_fanout_name_base = '%s.%s' % (self.series, fanout)
-            sections_for_fanout = '.'.join(map(lambda x: '[%s]' % x, sections))
+            sections_for_fanout = '.'.join(map(lambda x: '[%s]' % x, fanout_query.fanout_on))
             series_fanout_name = '%s.%s' % (series_fanout_name_base, sections_for_fanout)
 
-            queries.append(InfluxQuery.for_series(self.series).into(series_fanout_name).limit(None))
+            q = InfluxQuery.for_series(self.series)
+            q = q.into(series_fanout_name).limit(None)
+            q = q.columns(*fanout_query.columns_to_copy)
+            queries.append(q)
             for interval in self.downsample_interval:
                 q = InfluxQuery.for_series('/^%s.*/' % (series_fanout_name_base))
                 q = q.group_by(InfluxQuery.time(interval))
                 q = q.into('%s.:series_name' % (interval)).limit(None)
+                q = q.columns(InfluxQuery.count(fanout_query.columns_to_copy[0]))
                 queries.append(q)
 
         return queries
 
-    def query_for(self, fanout, interval, **kwargs):
+    def query_for(self, fanout, interval=None, **kwargs):
         if fanout not in self.fanouts:
             raise ContinuousQueryException('Fanout %s is not in [%s]' % (fanout,
                                                                          ','.join(self.fanout.keys())))
@@ -38,28 +42,34 @@ class InfluxDBContinuousQuery(object):
         fanout_def = self.fanouts[fanout]
 
         fanout_sections = []
-        for section in fanout_def:
+        for section in fanout_def.fanout_on:
             fanout_sections.append(kwargs.get(section))
 
         fanout_sections = map(unicode, fanout_sections)
-        series_name = '%s.%s.%s.%s' % (interval, self.series,
-                                       fanout, '.'.join(fanout_sections))
+        series_name = '%s.%s.%s' % (self.series, fanout,
+                                    '.'.join(fanout_sections))
 
-        return InfluxQuery.for_series(series_name).columns(InfluxQuery.sum('count'))
+        if interval:
+            series_name = '%s.%s' % (interval, series_name)
 
-# class ExampleContinuousQuery(InfluxDBContinuousQuery):
-#     series = 'page_views'
-#     fanouts = {
-#         'category': ('category_id',),
-#         'author': ('author_id',),
-#         'category_author': ('category_id', 'author_id',),
-#     }
-#
-# interval_query = ExampleContinuousQuery().query_for('author', '1m', author_id=10)
-# interval_query == 'select sum(count) from 1m.page_views.author.10 limit 10'
-# Queries For Sync
-# select * from page_view into page_view.category.[category_id]
-# select * from /^page_view.category.*/ group by time(1m) into 1m:series_name
-# select * from /^page_view.category.*/ group by time(1h) into 1h:series_name
-# select * from /^page_view.category.*/ group by time(1d) into 1d:series_name
+        q = InfluxQuery.for_series(series_name)
 
+        if interval:
+            q = q.columns(InfluxQuery.sum('count'))
+
+        return q
+
+
+def sync_continuous_queries(client, queries, recreate=False):
+    response = client.query('list continuous queries')
+    series = response[0]
+    id_by_query = {p[3]: p[2] for p in series['points']}
+
+    for q in queries:
+        id_ = id_by_query.get(q)
+        if id_:
+            if recreate:
+                client.query('drop continuous query %s' % (id_))
+            continue
+
+        client.query(q)

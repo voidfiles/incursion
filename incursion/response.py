@@ -12,6 +12,7 @@ from collections import namedtuple
 
 
 def parse_influxdb_response(data):
+    print data
     parsed_data = {}
     for series in data:
         custom_named_tuple = namedtuple('Custom', series['columns'])
