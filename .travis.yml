@@ -9,6 +9,7 @@ before_install:
 - sudo rm -rf /var/lib/apt/lists/*
 before_script:
 - sudo service influxdb start
+- sudo cat /opt/influxdb/shared/log.txt
 python:
 - '2.7'
 install:
