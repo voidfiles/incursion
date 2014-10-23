@@ -1,3 +1,4 @@
+import os
 import unittest
 from time import sleep
 
@@ -6,6 +7,8 @@ from incursion.query import InfluxQuery
 from incursion.client import INDBClient
 
 from .utils import InfluxDBClientTest
+
+RUNNING_IN_TRAVIS = os.environ.get('RUNNING_IN_TRAVIS')
 
 
 class ExampleContinuousQuery(InfluxDBContinuousQuery):
@@ -18,6 +21,7 @@ class ExampleContinuousQuery(InfluxDBContinuousQuery):
     downsample_interval = ['1s', '1h', '1d']
 
 
+@unittest.skipIf(RUNNING_IN_TRAVIS, 'Not running tests because travis')
 class TestContinueQueries(unittest.TestCase):
 
     def test_query_for(self):
@@ -49,6 +53,7 @@ class TestContinueQueries(unittest.TestCase):
             self.assertEquals(gen, raw)
 
 
+@unittest.skipIf(RUNNING_IN_TRAVIS, 'Not running tests because travis')
 class TestContinuousQueryPlanner(InfluxDBClientTest):
 
     def test_continuous_queries_sync(self):

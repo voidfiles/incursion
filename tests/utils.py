@@ -32,7 +32,7 @@ class InfluxDBClientTest(unittest.TestCase):
         self.client.write_points(data=test_data, batch_size=500)
 
     def setUp(self):
-        self.client = InfluxDBClient('127.0.0.1', 8086, 'root', 'root')
+        self.client = InfluxDBClient('localhost', 8086, 'root', 'root')
         self.database_name = 'test_%s' % (time.time())
         self.client.create_database(self.database_name)
         self.client.switch_db(self.database_name)
