@@ -12,6 +12,7 @@ before_script:
 - sudo sleep 10
 - sudo cat /opt/influxdb/shared/log.txt
 python:
+- 'pypy'
 - '2.7'
 install:
 - travis_retry pip install -r requirements.txt
