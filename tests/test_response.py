@@ -19,7 +19,7 @@ class TestResponseParser(unittest.TestCase):
 
         assert parsed_response.get('log_lines') is not None
 
-        example_series = parsed_response.get('log_lines')
+        example_series = list(parsed_response.get('log_lines'))
 
         assert len(example_series) == 2
 

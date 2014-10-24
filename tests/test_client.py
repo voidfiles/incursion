@@ -18,19 +18,19 @@ class TestResponseParser(InfluxDBClientTest):
 
         series = resp.get('page_views')
 
-        self.assertEqual(len(series), len(self.points))
+        self.assertEqual(len(list(series)), len(self.points))
 
         query = query.limit(10)
         resp = client.result_for_query(query)
 
         series = resp.get('page_views')
-        assert len(series) == 10
+        assert len(list(series)) == 10
 
         query = InfluxQuery.for_series('page_views').columns(InfluxQuery.count('category_id')).limit(None)
         resp = client.result_for_query(query)
         series = resp.get('page_views')
 
-        self.assertEqual(series[0].count, len(self.points))
+        self.assertEqual(list(series)[0].count, len(self.points))
 
     def test_groups(self):
         self.generateData()

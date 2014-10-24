@@ -1,6 +1,7 @@
 import datetime
 import calendar
 from collections import namedtuple
+import six
 
 VALID_OPS = {
     'matches': u'=~',
@@ -201,7 +202,7 @@ class InfluxQuery(object):
             if column_def not in self.column_clauses:
                 self.column_clauses.append(column_def)
 
-        for alias, column in kwargs.items():
+        for alias, column in six.iteritems(kwargs):
             if callable(column):
                 column_expression = column()
             else:
@@ -214,7 +215,7 @@ class InfluxQuery(object):
         return self
 
     def where(self, **kwargs):
-        for column, val in kwargs.items():
+        for column, val in six.iteritems(kwargs):
             op = u'eq'
             if '__' in column:
                 column, op = column.split('__')

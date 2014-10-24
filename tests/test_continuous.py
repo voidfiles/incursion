@@ -79,11 +79,11 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
         self.generateData()
         q = InfluxQuery.for_series('page_views').columns(category_id=InfluxQuery.distinct('category_id'))
         resp = INDBClient(conn=self.client).result_for_query(q)
-        cat_id = resp['page_views'][0].category_id
+        cat_id = list(resp['page_views'])[0].category_id
 
         q = ExampleContinuousQuery().query_for('category', category_id=cat_id)
         resp = INDBClient(conn=self.client).result_for_query(q)
-        assert len(resp['page_views.category.%s' % (cat_id)][0]) > 0
+        assert len(list(resp['page_views.category.%s' % (cat_id)])[0]) > 0
 
         self.client.write_points([{
             "name": "page_views",
@@ -96,8 +96,8 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
             ]
         }])
 
-        sleep(1)
+        sleep(2)
 
         q = ExampleContinuousQuery().query_for('category', '1s', category_id=cat_id)
         resp = INDBClient(conn=self.client).result_for_query(q)
-        assert len(resp['1s.page_views.category.%s' % (cat_id)]) > 0
+        assert len(list(resp['1s.page_views.category.%s' % (cat_id)])) > 0

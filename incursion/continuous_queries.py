@@ -1,4 +1,5 @@
 from collections import namedtuple, OrderedDict
+import six
 
 from .query import InfluxQuery
 
@@ -16,7 +17,7 @@ class InfluxDBContinuousQuery(object):
 
     def continuous_queries(self):
         queries = []
-        for fanout, fanout_query in self.fanouts.items():
+        for fanout, fanout_query in six.iteritems(self.fanouts):
             series_fanout_name_base = '%s.%s' % (self.series, fanout)
             sections_for_fanout = '.'.join(map(lambda x: '[%s]' % x, fanout_query.fanout_on))
             series_fanout_name = '%s.%s' % (series_fanout_name_base, sections_for_fanout)
@@ -45,7 +46,7 @@ class InfluxDBContinuousQuery(object):
         for section in fanout_def.fanout_on:
             fanout_sections.append(kwargs.get(section))
 
-        fanout_sections = map(str, fanout_sections)
+        fanout_sections = map(six.text_type, fanout_sections)
         series_name = '%s.%s.%s' % (self.series, fanout,
                                     '.'.join(fanout_sections))
 
