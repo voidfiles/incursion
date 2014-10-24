@@ -26,7 +26,7 @@ class InfluxDBContinuousQuery(object):
             q = q.columns(*fanout_query.columns_to_copy)
             queries.append(q)
             for interval in self.downsample_interval:
-                q = InfluxQuery.for_series('/^%s.*/' % (series_fanout_name_base))
+                q = InfluxQuery.for_series(InfluxQuery.regex('/^%s.*/' % (series_fanout_name_base)))
                 q = q.group_by(InfluxQuery.time(interval))
                 q = q.into('%s.:series_name' % (interval)).limit(None)
                 q = q.columns(InfluxQuery.count(fanout_query.columns_to_copy[0]))
@@ -63,9 +63,8 @@ class InfluxDBContinuousQuery(object):
 def sync_continuous_queries(client, queries, recreate=False):
     response = client.query('list continuous queries')
     series = response[0]
-    print series['columns']
-    print series['points']
-    id_by_query = {p[3]: p[2] for p in series['points']}
+
+    id_by_query = {p[2]: p[1] for p in series['points']}
 
     for q in queries:
         id_ = id_by_query.get(q)

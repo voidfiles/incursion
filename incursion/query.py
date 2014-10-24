@@ -245,10 +245,17 @@ class InfluxQuery(object):
     def _query_group(self):
         return u', '.join(self.group_by_clauses) + u' '
 
+    def _query_series(self):
+        series = self.series
+        if not isinstance(self.series, RegexString):
+            series = '"%s"' % (series)
+
+        return u'from %s ' % (series)
+
     def query(self):
         query = u'select '
         query += self._query_columns()
-        query += u'from %s ' % (self.series)
+        query += self._query_series()
         if self.where_clauses:
             query += u'where '
             query += self._query_where()
