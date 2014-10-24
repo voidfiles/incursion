@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import time
 import unittest
 import random
+from six.moves import xrange
 
 from influxdb import InfluxDBClient
 

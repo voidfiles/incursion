@@ -12,10 +12,11 @@ from collections import namedtuple
 
 
 def parse_influxdb_response(data):
-    print data
     parsed_data = {}
     for series in data:
         custom_named_tuple = namedtuple('Custom', series['columns'])
-        parsed_data[series['name']] = map(lambda x: custom_named_tuple(*x), series['points'])
+        parsed_data[series['name']] = []
+        for x in series['points']:
+            parsed_data[series['name']].append(custom_named_tuple(*x))
 
     return parsed_data

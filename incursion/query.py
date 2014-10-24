@@ -12,7 +12,15 @@ VALID_OPS = {
 }
 
 
-class RegexString(bytes):
+class LiteralString(object):
+    def __init__(self, value):
+        self.value = value
+
+    def render(self):
+        return self.value
+
+
+class RegexString(LiteralString):
     pass
 
 
@@ -38,8 +46,18 @@ def is_regex(reg_str):
     return isinstance(reg_str, RegexString)
 
 
-def is_time(value):
-    return isinstance(value, TimeString)
+def is_literal(obj):
+    if not obj:
+        return False
+
+    return isinstance(obj, LiteralString)
+
+
+def is_time(obj):
+    if not obj:
+        return False
+
+    return isinstance(obj, TimeString)
 
 
 def datetime_to_secs(dt):
@@ -47,16 +65,27 @@ def datetime_to_secs(dt):
     return int(calendar.timegm(dt.utctimetuple()))
 
 
+def is_string(value):
+    try:
+        return isinstance(value, basestring)
+    except NameError:
+        return isinstance(value, str)
+
+    return False
+
+
 class WhereClause(namedtuple('WhereClause', 'column op comparison')):
 
     def render(self):
         litteral_op = VALID_OPS[self.op]
         comparison = self.comparison
-
         if is_time(comparison):
             comparison = comparison.render()
 
-        elif isinstance(comparison, basestring) and not is_regex(comparison):
+        elif is_literal(comparison):
+            comparison = comparison.render()
+
+        elif is_string(comparison):
             comparison = "'%s'" % (comparison)
 
         return u'%s %s %s' % (self.column, litteral_op, comparison)
@@ -156,7 +185,7 @@ class InfluxQuery(object):
 
     @staticmethod
     def now_minus(time_expression):
-        return TimeString('now() - %s' % (time_expression))
+        return LiteralString('now() - %s' % (time_expression))
 
     @staticmethod
     def time_value(time_expression):
@@ -172,7 +201,7 @@ class InfluxQuery(object):
             if column_def not in self.column_clauses:
                 self.column_clauses.append(column_def)
 
-        for alias, column in kwargs.iteritems():
+        for alias, column in kwargs.items():
             if callable(column):
                 column_expression = column()
             else:
@@ -185,7 +214,7 @@ class InfluxQuery(object):
         return self
 
     def where(self, **kwargs):
-        for column, val in kwargs.iteritems():
+        for column, val in kwargs.items():
             op = u'eq'
             if '__' in column:
                 column, op = column.split('__')
@@ -245,10 +274,19 @@ class InfluxQuery(object):
     def _query_group(self):
         return u', '.join(self.group_by_clauses) + u' '
 
+    def _query_series(self):
+        series = self.series
+        if not isinstance(self.series, RegexString):
+            series = '"%s"' % (series)
+        else:
+            series = self.series.render()
+
+        return u'from %s ' % (series)
+
     def query(self):
         query = u'select '
         query += self._query_columns()
-        query += u'from %s ' % (self.series)
+        query += self._query_series()
         if self.where_clauses:
             query += u'where '
             query += self._query_where()

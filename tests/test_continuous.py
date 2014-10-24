@@ -1,5 +1,7 @@
+from collections import OrderedDict
 import os
 import unittest
+import pprint
 from time import sleep
 
 from incursion.continuous_queries import InfluxDBContinuousQuery, sync_continuous_queries, FanoutQuery
@@ -13,15 +15,14 @@ RUNNING_IN_TRAVIS = os.environ.get('RUNNING_IN_TRAVIS')
 
 class ExampleContinuousQuery(InfluxDBContinuousQuery):
     series = 'page_views'
-    fanouts = {
-        'category': FanoutQuery(fanout_on=('category_id',), columns_to_copy=('name', )),
-        'author': FanoutQuery(fanout_on=('author_id',), columns_to_copy=('name', )),
-        'category_author': FanoutQuery(fanout_on=('category_id', 'author_id',), columns_to_copy=('name', )),
-    }
+    fanouts = OrderedDict([
+        ('category', FanoutQuery(fanout_on=('category_id',), columns_to_copy=('name', ))),
+        ('author', FanoutQuery(fanout_on=('author_id',), columns_to_copy=('name', ))),
+        ('category_author', FanoutQuery(fanout_on=('category_id', 'author_id',), columns_to_copy=('name', )),)
+    ])
     downsample_interval = ['1s', '1h', '1d']
 
 
-@unittest.skipIf(RUNNING_IN_TRAVIS, 'Not running tests because travis')
 class TestContinueQueries(unittest.TestCase):
 
     def test_query_for(self):
@@ -29,31 +30,31 @@ class TestContinueQueries(unittest.TestCase):
         q = q.where(time__gt=InfluxQuery.now_minus('4h'))
         q = q.limit(None)
 
-        self.assertEquals(q.query(), u"select sum(count) from 1s.page_views.author.10 where time > now() - 4h")
+        self.assertEquals(q.query(), u'select sum(count) from "1s.page_views.author.10" where time > now() - 4h')
 
     def test_continuous_queries(self):
         queries = ExampleContinuousQuery().continuous_queries()
         raw_queries = [
-            u'select name from page_views into page_views.category.[category_id]',
+            u'select name from "page_views" into page_views.category.[category_id]',
             u'select count(name) from /^page_views.category.*/ group by time(1s) into 1s.:series_name',
             u'select count(name) from /^page_views.category.*/ group by time(1h) into 1h.:series_name',
             u'select count(name) from /^page_views.category.*/ group by time(1d) into 1d.:series_name',
-            u'select name from page_views into page_views.category_author.[category_id].[author_id]',
+            u'select name from "page_views" into page_views.author.[author_id]',
+            u'select count(name) from /^page_views.author.*/ group by time(1s) into 1s.:series_name',
+            u'select count(name) from /^page_views.author.*/ group by time(1h) into 1h.:series_name',
+            u'select count(name) from /^page_views.author.*/ group by time(1d) into 1d.:series_name',
+            u'select name from "page_views" into page_views.category_author.[category_id].[author_id]',
             u'select count(name) from /^page_views.category_author.*/ group by time(1s) into 1s.:series_name',
             u'select count(name) from /^page_views.category_author.*/ group by time(1h) into 1h.:series_name',
             u'select count(name) from /^page_views.category_author.*/ group by time(1d) into 1d.:series_name',
-            u'select name from page_views into page_views.author.[author_id]',
-            u'select count(name) from /^page_views.author.*/ group by time(1s) into 1s.:series_name',
-            u'select count(name) from /^page_views.author.*/ group by time(1h) into 1h.:series_name',
-            u'select count(name) from /^page_views.author.*/ group by time(1d) into 1d.:series_name'
         ]
-
-        zipped = zip(map(lambda q: q.query(), queries), raw_queries)
+        pprint.pprint(list(map(lambda q: q.query(), queries)))
+        pprint.pprint(raw_queries)
+        zipped = zip(list(map(lambda q: q.query(), queries)), raw_queries)
         for gen, raw in zipped:
             self.assertEquals(gen, raw)
 
 
-@unittest.skipIf(RUNNING_IN_TRAVIS, 'Not running tests because travis')
 class TestContinuousQueryPlanner(InfluxDBClientTest):
 
     def test_continuous_queries_sync(self):
@@ -62,7 +63,6 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
 
         response = self.client.query('list continuous queries')
         series = response[0]
-
         assert len(series['points']) == 12
 
         sync_continuous_queries(self.client, map(lambda q: q.query(), queries))
@@ -83,7 +83,7 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
 
         q = ExampleContinuousQuery().query_for('category', category_id=cat_id)
         resp = INDBClient(conn=self.client).result_for_query(q)
-        assert len(resp.values()[0]) > 0
+        assert len(resp['page_views.category.%s' % (cat_id)][0]) > 0
 
         self.client.write_points([{
             "name": "page_views",
@@ -100,4 +100,4 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
 
         q = ExampleContinuousQuery().query_for('category', '1s', category_id=cat_id)
         resp = INDBClient(conn=self.client).result_for_query(q)
-        assert len(resp.values()[0]) > 0
+        assert len(resp['1s.page_views.category.%s' % (cat_id)]) > 0

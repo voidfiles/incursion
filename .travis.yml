@@ -11,10 +11,9 @@ before_script:
 - sudo service influxdb start
 - sudo sleep 10
 - sudo cat /opt/influxdb/shared/log.txt
-- sudo netstat -lntp
 python:
 - '2.7'
 install:
 - travis_retry pip install -r requirements.txt
-- travis_retry pip install -r test-requirements.txt
+- travis_retry pip install nose
 script: nosetests

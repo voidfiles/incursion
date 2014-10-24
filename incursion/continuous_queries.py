@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 from .query import InfluxQuery
 
@@ -11,12 +11,12 @@ class ContinuousQueryException(Exception):
 
 class InfluxDBContinuousQuery(object):
     series = None
-    fanouts = {}
+    fanouts = OrderedDict()
     downsample_interval = ['1m', '1h', '1d']
 
     def continuous_queries(self):
         queries = []
-        for fanout, fanout_query in self.fanouts.iteritems():
+        for fanout, fanout_query in self.fanouts.items():
             series_fanout_name_base = '%s.%s' % (self.series, fanout)
             sections_for_fanout = '.'.join(map(lambda x: '[%s]' % x, fanout_query.fanout_on))
             series_fanout_name = '%s.%s' % (series_fanout_name_base, sections_for_fanout)
@@ -26,7 +26,7 @@ class InfluxDBContinuousQuery(object):
             q = q.columns(*fanout_query.columns_to_copy)
             queries.append(q)
             for interval in self.downsample_interval:
-                q = InfluxQuery.for_series('/^%s.*/' % (series_fanout_name_base))
+                q = InfluxQuery.for_series(InfluxQuery.regex('/^%s.*/' % (series_fanout_name_base)))
                 q = q.group_by(InfluxQuery.time(interval))
                 q = q.into('%s.:series_name' % (interval)).limit(None)
                 q = q.columns(InfluxQuery.count(fanout_query.columns_to_copy[0]))
@@ -45,7 +45,7 @@ class InfluxDBContinuousQuery(object):
         for section in fanout_def.fanout_on:
             fanout_sections.append(kwargs.get(section))
 
-        fanout_sections = map(unicode, fanout_sections)
+        fanout_sections = map(str, fanout_sections)
         series_name = '%s.%s.%s' % (self.series, fanout,
                                     '.'.join(fanout_sections))
 
@@ -63,7 +63,10 @@ class InfluxDBContinuousQuery(object):
 def sync_continuous_queries(client, queries, recreate=False):
     response = client.query('list continuous queries')
     series = response[0]
-    id_by_query = {p[3]: p[2] for p in series['points']}
+
+    id_by_query = {}
+    for p in series['points']:
+        id_by_query[p[2]] = p[1]
 
     for q in queries:
         id_ = id_by_query.get(q)
