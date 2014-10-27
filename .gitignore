@@ -3,3 +3,5 @@ incursion.egg-info
 dist
 *.DS_Store
 .tox
+docs/_build
+

@@ -51,8 +51,7 @@ class TestContinueQueries(unittest.TestCase):
             u'select count(name) from /^page_views.category_author.*/ group by time(1h) into 1h.:series_name',
             u'select count(name) from /^page_views.category_author.*/ group by time(1d) into 1d.:series_name',
         ]
-        pprint.pprint(list(map(lambda q: q.query(), queries)))
-        pprint.pprint(raw_queries)
+
         zipped = zip(list(map(lambda q: q.query(), queries)), raw_queries)
         for gen, raw in zipped:
             self.assertEquals(gen, raw)
