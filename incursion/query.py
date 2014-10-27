@@ -3,97 +3,115 @@ import calendar
 from collections import namedtuple
 import six
 
-VALID_OPS = {
-    'matches': u'=~',
-    'not_matches': u'!~',
-    'gt': u'>',
-    'lt': u'<',
-    'ne': u'<>',
-    'eq': u'=',
-}
+
+from influxdb import InfluxDBClient
+from influxdb.client import InfluxDBClientError
 
 
-class LiteralString(object):
-    def __init__(self, value):
-        self.value = value
+# Results
+def parse_influxdb_response(data):
+    parsed_data = {}
+    for series in data:
+        custom_named_tuple = namedtuple('Custom', series['columns'])
+        parsed_data[series['name']] = map(lambda x: custom_named_tuple(*x), series['points'])
 
-    def render(self):
-        return self.value
-
-
-class RegexString(LiteralString):
-    pass
+    return parsed_data
 
 
-def parse_time(value):
-    if type(value) in (datetime.datetime, datetime.date):
-        return u'%ss' % datetime_to_secs(value)
-
-    return value
-
-
-class TimeString(object):
-    def __init__(self, value):
-        self.value = value
-
-    def render(self):
-        return parse_time(self.value)
-
-
-def is_regex(reg_str):
-    if not reg_str:
-        return False
-
-    return isinstance(reg_str, RegexString)
-
-
-def is_literal(obj):
-    if not obj:
-        return False
-
-    return isinstance(obj, LiteralString)
-
-
-def is_time(obj):
-    if not obj:
-        return False
-
-    return isinstance(obj, TimeString)
-
-
-def datetime_to_secs(dt):
-    # http://stackoverflow.com/questions/2956886/python-calendar-timegm-vs-time-mktime
-    return int(calendar.timegm(dt.utctimetuple()))
-
-
-def is_string(value):
+def get_result(q, conn=None, **kwargs):
+    if not conn:
+        conn = InfluxDBClient(**kwargs)
     try:
-        return isinstance(value, basestring)
-    except NameError:
-        return isinstance(value, str)
+        result = conn.query(q.query())
+    except InfluxDBClientError:
+        raise
 
-    return False
-
-
-class WhereClause(namedtuple('WhereClause', 'column op comparison')):
-
-    def render(self):
-        litteral_op = VALID_OPS[self.op]
-        comparison = self.comparison
-        if is_time(comparison):
-            comparison = comparison.render()
-
-        elif is_literal(comparison):
-            comparison = comparison.render()
-
-        elif is_string(comparison):
-            comparison = "'%s'" % (comparison)
-
-        return u'%s %s %s' % (self.column, litteral_op, comparison)
+    return parse_influxdb_response(result)
 
 
-class InfluxQueryException(Exception):
-    pass
+# Aggregate functions
+def count(column):
+    return 'count(%s)' % (column)
+
+
+def min(column):
+    return 'min(%s)' % (column)
+
+
+def max(column):
+    return 'max(%s)' % (column)
+
+
+def mean(column):
+    return 'mean(%s)' % (column)
+
+
+def mode(column):
+    return 'mode(%s)' % (column)
+
+
+def median(column):
+    return 'median(%s)' % (column)
+
+
+def distinct(column):
+    return 'distinct(%s)' % (column)
+
+
+def percentile(column, nth):
+    return 'percentile(%s, %s)' % (column, nth)
+
+
+def histogram(column, bucket_size=1.0):
+    return 'histogram(%s, %s)' % (column, bucket_size)
+
+
+def derivative(column):
+    return 'derivative(%s)' % (column)
+
+
+def sum(column):
+    return 'sum(%s)' % (column)
+
+
+def stddev(column):
+    return 'stddev(%s)' % (column)
+
+
+def first(column):
+    return 'first(%s)' % (column)
+
+
+def last(column):
+    return 'last(%s)' % (column)
+
+
+def difference(column):
+    return 'difference(%s)' % (column)
+
+
+def top(column, n):
+    return 'top(%s, %s)' % (column, n)
+
+
+def bottom(column, n):
+    return 'bottom(%s, %s)' % (column, n)
+
+
+def time(time_expression):
+    return 'time(%s)' % (time_expression)
+
+
+def now_minus(time_expression):
+    return LiteralString('now() - %s' % (time_expression))
+
+
+def time_value(time_expression):
+    return TimeString(time_expression)
+
+
+def regex(regex_str):
+    return RegexString(regex_str)
 
 
 class InfluxQuery(object):
@@ -107,94 +125,6 @@ class InfluxQuery(object):
         self.limit_clause = 100
         self.column_clauses = []
         self.into_pattern = None
-
-    @classmethod
-    def for_series(cls, series):
-        return cls(series)
-
-    @staticmethod
-    def count(column):
-        return 'count(%s)' % (column)
-
-    @staticmethod
-    def min(column):
-        return 'min(%s)' % (column)
-
-    @staticmethod
-    def max(column):
-        return 'max(%s)' % (column)
-
-    @staticmethod
-    def mean(column):
-        return 'mean(%s)' % (column)
-
-    @staticmethod
-    def mode(column):
-        return 'mode(%s)' % (column)
-
-    @staticmethod
-    def median(column):
-        return 'median(%s)' % (column)
-
-    @staticmethod
-    def distinct(column):
-        return 'distinct(%s)' % (column)
-
-    @staticmethod
-    def percentile(column, nth):
-        return 'percentile(%s, %s)' % (column, nth)
-
-    @staticmethod
-    def histogram(column, bucket_size=1.0):
-        return 'histogram(%s, %s)' % (column, bucket_size)
-
-    @staticmethod
-    def derivative(column):
-        return 'derivative(%s)' % (column)
-
-    @staticmethod
-    def sum(column):
-        return 'sum(%s)' % (column)
-
-    @staticmethod
-    def stddev(column):
-        return 'stddev(%s)' % (column)
-
-    @staticmethod
-    def first(column):
-        return 'first(%s)' % (column)
-
-    @staticmethod
-    def last(column):
-        return 'last(%s)' % (column)
-
-    @staticmethod
-    def difference(column):
-        return 'difference(%s)' % (column)
-
-    @staticmethod
-    def top(column, n):
-        return 'top(%s, %s)' % (column, n)
-
-    @staticmethod
-    def bottom(column, n):
-        return 'bottom(%s, %s)' % (column, n)
-
-    @staticmethod
-    def time(time_expression):
-        return 'time(%s)' % (time_expression)
-
-    @staticmethod
-    def now_minus(time_expression):
-        return LiteralString('now() - %s' % (time_expression))
-
-    @staticmethod
-    def time_value(time_expression):
-        return TimeString(time_expression)
-
-    @staticmethod
-    def regex(regex_str):
-        return RegexString(regex_str)
 
     def columns(self, *args, **kwargs):
         for arg in args:
@@ -309,3 +239,97 @@ class InfluxQuery(object):
             query += 'into %s ' % (self.into_pattern)
 
         return query.strip()
+
+
+VALID_OPS = {
+    'matches': u'=~',
+    'not_matches': u'!~',
+    'gt': u'>',
+    'lt': u'<',
+    'ne': u'<>',
+    'eq': u'=',
+}
+
+
+class LiteralString(object):
+    def __init__(self, value):
+        self.value = value
+
+    def render(self):
+        return self.value
+
+
+class RegexString(LiteralString):
+    pass
+
+
+def parse_time(value):
+    if type(value) in (datetime.datetime, datetime.date):
+        return u'%ss' % datetime_to_secs(value)
+
+    return value
+
+
+class TimeString(object):
+    def __init__(self, value):
+        self.value = value
+
+    def render(self):
+        return parse_time(self.value)
+
+
+class WhereClause(namedtuple('WhereClause', 'column op comparison')):
+
+    def render(self):
+        litteral_op = VALID_OPS[self.op]
+        comparison = self.comparison
+        if is_time(comparison):
+            comparison = comparison.render()
+
+        elif is_literal(comparison):
+            comparison = comparison.render()
+
+        elif is_string(comparison):
+            comparison = "'%s'" % (comparison)
+
+        return u'%s %s %s' % (self.column, litteral_op, comparison)
+
+
+class InfluxQueryException(Exception):
+    pass
+
+
+def is_regex(reg_str):
+    if not reg_str:
+        return False
+
+    return isinstance(reg_str, RegexString)
+
+
+def is_literal(obj):
+    if not obj:
+        return False
+
+    return isinstance(obj, LiteralString)
+
+
+def is_time(obj):
+    if not obj:
+        return False
+
+    return isinstance(obj, TimeString)
+
+
+def datetime_to_secs(dt):
+    # http://stackoverflow.com/questions/2956886/python-calendar-timegm-vs-time-mktime
+    return int(calendar.timegm(dt.utctimetuple()))
+
+
+def is_string(value):
+    try:
+        return isinstance(value, basestring)
+    except NameError:
+        return isinstance(value, str)
+
+    return False
+

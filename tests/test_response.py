@@ -1,6 +1,6 @@
 import unittest
 
-from incursion.response import parse_influxdb_response
+from incursion.query import parse_influxdb_response
 
 
 class TestResponseParser(unittest.TestCase):

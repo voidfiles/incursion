@@ -1,7 +1,7 @@
 from collections import namedtuple, OrderedDict
 import six
 
-from .query import InfluxQuery
+import incursion as indb
 
 FanoutQuery = namedtuple('FanoutQuery', 'fanout_on columns_to_copy')
 
@@ -11,26 +11,37 @@ class ContinuousQueryException(Exception):
 
 
 class InfluxDBContinuousQuery(object):
+    """
+    Manage series that have multiple fanout queries and/or downsamples.
+    """
     series = None
+    column_to_count = None
     fanouts = OrderedDict()
     downsample_interval = ['1m', '1h', '1d']
 
     def continuous_queries(self):
         queries = []
+        for interval in self.downsample_interval:
+            q = indb.q(self.series)
+            q = q.into('%s.:series_name' % (interval)).limit(None)
+            q = q.group_by(indb.time(interval))
+            q = q.columns(indb.count(self.column_to_count))
+            queries.append(q)
+
         for fanout, fanout_query in six.iteritems(self.fanouts):
             series_fanout_name_base = '%s.%s' % (self.series, fanout)
             sections_for_fanout = '.'.join(map(lambda x: '[%s]' % x, fanout_query.fanout_on))
             series_fanout_name = '%s.%s' % (series_fanout_name_base, sections_for_fanout)
 
-            q = InfluxQuery.for_series(self.series)
+            q = indb.q(self.series)
             q = q.into(series_fanout_name).limit(None)
             q = q.columns(*fanout_query.columns_to_copy)
             queries.append(q)
             for interval in self.downsample_interval:
-                q = InfluxQuery.for_series(InfluxQuery.regex('/^%s.*/' % (series_fanout_name_base)))
-                q = q.group_by(InfluxQuery.time(interval))
+                q = indb.q(indb.regex('/^%s.*/' % (series_fanout_name_base)))
+                q = q.group_by(indb.time(interval))
                 q = q.into('%s.:series_name' % (interval)).limit(None)
-                q = q.columns(InfluxQuery.count(fanout_query.columns_to_copy[0]))
+                q = q.columns(indb.count(self.column_to_count))
                 queries.append(q)
 
         return queries
@@ -53,10 +64,10 @@ class InfluxDBContinuousQuery(object):
         if interval:
             series_name = '%s.%s' % (interval, series_name)
 
-        q = InfluxQuery.for_series(series_name)
+        q = indb.q(series_name)
 
         if interval:
-            q = q.columns(InfluxQuery.sum('count'))
+            q = q.columns(indb.sum('count'))
 
         return q
 

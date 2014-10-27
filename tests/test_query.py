@@ -1,12 +1,12 @@
 import unittest
 
-from incursion.query import InfluxQuery
+import incursion as indb
 
 
 class TestQueryBuilder(unittest.TestCase):
 
     def setUp(self):
-        self.query = InfluxQuery.for_series('test')
+        self.query = indb.q('test')
 
     def test_simple(self):
         self.assertEqual('select * from "test" limit 100', self.query.query())
@@ -74,40 +74,40 @@ class TestQueryBuilder(unittest.TestCase):
         self.assertEqual('select * from "test" where time <> 10 limit 100', q.query())
 
         q.where_clauses = []  # Reset
-        q.where(time__matches=InfluxQuery.regex(u'/a.*/'))
+        q.where(time__matches=indb.regex(u'/a.*/'))
         self.assertEqual('select * from "test" where time =~ /a.*/ limit 100', q.query())
 
         q.where_clauses = []  # Reset
-        q.where(time__not_matches=InfluxQuery.regex(u'/a.*/'))
+        q.where(time__not_matches=indb.regex(u'/a.*/'))
         self.assertEqual('select * from "test" where time !~ /a.*/ limit 100', q.query())
 
         dt = datetime(2011, 2, 11, 20, 0, 0, 0)
 
         q.where_clauses = []  # Reset
-        q.where(time__gt=InfluxQuery.time_value(dt))
+        q.where(time__gt=indb.time_value(dt))
         self.assertEqual('select * from "test" where time > 1297454400s limit 100', q.query())
 
         q.where_clauses = []  # Reset
-        q.where(time__lt=InfluxQuery.time_value(dt))
+        q.where(time__lt=indb.time_value(dt))
         self.assertEqual('select * from "test" where time < 1297454400s limit 100', q.query())
 
     def test_group_by(self):
         q = self.query
 
-        q.group_by(InfluxQuery.time(u'10m'))
+        q.group_by(indb.time(u'10m'))
         self.assertEqual('select * from "test" group by time(10m) limit 100', q.query())
 
         # test doubles
-        q.group_by(InfluxQuery.time(u'10m'))
+        q.group_by(indb.time(u'10m'))
         self.assertEqual('select * from "test" group by time(10m) limit 100', q.query())
 
-        q.group_by(InfluxQuery.time(u'10m'), 'test')
+        q.group_by(indb.time(u'10m'), 'test')
         self.assertEqual('select * from "test" group by time(10m), test limit 100', q.query())
 
     def test_fill(self):
         q = self.query
 
-        q.group_by(InfluxQuery.time(u'10m'))
+        q.group_by(indb.time(u'10m'))
         q.fill(0)
         self.assertEqual('select * from "test" group by time(10m) fill(0) limit 100', q.query())
 
@@ -120,11 +120,11 @@ class TestQueryBuilder(unittest.TestCase):
     def test_aggregations(self):
         q = self.query
 
-        q.columns(InfluxQuery.count('time'))
+        q.columns(indb.count('time'))
         self.assertEqual('select count(time) from "test" limit 100', q.query())
 
         # Test doubles
-        q.columns(InfluxQuery.count('time'))
+        q.columns(indb.count('time'))
         self.assertEqual('select count(time) from "test" limit 100', q.query())
 
         # Reset the columns
@@ -133,7 +133,7 @@ class TestQueryBuilder(unittest.TestCase):
 
 
         # Test embedded
-        q.columns(InfluxQuery.count(InfluxQuery.distinct('time')))
+        q.columns(indb.count(indb.distinct('time')))
         self.assertEqual('select count(distinct(time)) from "test" limit 100', q.query())
 
         simple_methods = ['min', 'max', 'mean', 'mode', 'median', 'distinct',
@@ -142,28 +142,28 @@ class TestQueryBuilder(unittest.TestCase):
         for method in simple_methods:
             # Reset the columns
             q.column_clauses = []
-            q.columns(getattr(InfluxQuery, method)('time'))
+            q.columns(getattr(indb, method)('time'))
             query = 'select %s(time) from "test" limit 100' % (method)
 
             self.assertEqual(query, q.query())
 
         q.column_clauses = []
-        q.columns(InfluxQuery.percentile('time', 2))
+        q.columns(indb.percentile('time', 2))
         self.assertEqual('select percentile(time, 2) from "test" limit 100', q.query())
 
         q.column_clauses = []
-        q.columns(InfluxQuery.histogram('time'))
+        q.columns(indb.histogram('time'))
         self.assertEqual('select histogram(time, 1.0) from "test" limit 100', q.query())
 
         q.column_clauses = []
-        q.columns(InfluxQuery.histogram('time', 1.01))
+        q.columns(indb.histogram('time', 1.01))
         self.assertEqual('select histogram(time, 1.01) from "test" limit 100', q.query())
 
         q.column_clauses = []
-        q.columns(InfluxQuery.top('time', 10))
+        q.columns(indb.top('time', 10))
         self.assertEqual('select top(time, 10) from "test" limit 100', q.query())
 
         q.column_clauses = []
-        q.columns(InfluxQuery.bottom('time', 20))
+        q.columns(indb.bottom('time', 20))
         self.assertEqual('select bottom(time, 20) from "test" limit 100', q.query())
 

@@ -19,16 +19,16 @@ method for building queries on top of a raw unstructured query interface.
 Incursion was built to bring a new pattern to your InfluxDB Queries.
 
 .. code-block:: pycon
-
-    >>> q = InfluxQuery.for_series('page_views')
-    >>> q = q.columns(InfluxQuery.count(InfluxQuery.distinct('author_id')), 'author_id')
-    >>> q = q.group_by(InfluxQuery.time('1h'))
-    >>> q = q.where(category__matches=InfluxQuery.regex('/(10|11)/'))
+    >>> import incursion as indb
+    >>> q = indb.q('page_views')
+    >>> q = q.columns(indb.count(indb.distinct('author_id')), 'author_id')
+    >>> q = q.group_by(indb.time('1h'))
+    >>> q = q.where(category__matches=indb.regex('/(10|11)/'))
     >>> from, to = (datetime(2014, 10, 20), datetime(2014, 10, 21))
     >>> q = q.where(time__gt=from, time__lt=to)
     >>> q = q.fill(0)
     >>> q = q.limit(None)
-    >>> resp = INDBClient().result_from_query(q)
+    >>> resp = indb.get_result(q)
     >>> assert resp['page_views']
     >>> print '%(14)s %(6)s %(2)s' % ('time', 'count', 'id')
     >>> for row in resp['page_views']:

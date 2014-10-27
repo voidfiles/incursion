@@ -5,8 +5,7 @@ import pprint
 from time import sleep
 
 from incursion.continuous_queries import InfluxDBContinuousQuery, sync_continuous_queries, FanoutQuery
-from incursion.query import InfluxQuery
-from incursion.client import INDBClient
+import incursion as indb
 
 from .utils import InfluxDBClientTest
 
@@ -15,6 +14,7 @@ RUNNING_IN_TRAVIS = os.environ.get('RUNNING_IN_TRAVIS')
 
 class ExampleContinuousQuery(InfluxDBContinuousQuery):
     series = 'page_views'
+    column_to_count = 'name'
     fanouts = OrderedDict([
         ('category', FanoutQuery(fanout_on=('category_id',), columns_to_copy=('name', ))),
         ('author', FanoutQuery(fanout_on=('author_id',), columns_to_copy=('name', ))),
@@ -27,7 +27,7 @@ class TestContinueQueries(unittest.TestCase):
 
     def test_query_for(self):
         q = ExampleContinuousQuery().query_for('author', '1s', author_id=10)
-        q = q.where(time__gt=InfluxQuery.now_minus('4h'))
+        q = q.where(time__gt=indb.now_minus('4h'))
         q = q.limit(None)
 
         self.assertEquals(q.query(), u'select sum(count) from "1s.page_views.author.10" where time > now() - 4h')
@@ -35,6 +35,9 @@ class TestContinueQueries(unittest.TestCase):
     def test_continuous_queries(self):
         queries = ExampleContinuousQuery().continuous_queries()
         raw_queries = [
+            u'select count(name) from "page_views" group by time(1s) into 1s.:series_name',
+            u'select count(name) from "page_views" group by time(1h) into 1h.:series_name',
+            u'select count(name) from "page_views" group by time(1d) into 1d.:series_name',
             u'select name from "page_views" into page_views.category.[category_id]',
             u'select count(name) from /^page_views.category.*/ group by time(1s) into 1s.:series_name',
             u'select count(name) from /^page_views.category.*/ group by time(1h) into 1h.:series_name',
@@ -63,26 +66,26 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
 
         response = self.client.query('list continuous queries')
         series = response[0]
-        assert len(series['points']) == 12
+        assert len(series['points']) == 15
 
         sync_continuous_queries(self.client, map(lambda q: q.query(), queries))
 
         response = self.client.query('list continuous queries')
         series = response[0]
 
-        assert len(series['points']) == 12
+        assert len(series['points']) == 15
 
     def test_for_interval(self):
         queries = ExampleContinuousQuery().continuous_queries()
         sync_continuous_queries(self.client, map(lambda q: q.query(), queries))
 
         self.generateData()
-        q = InfluxQuery.for_series('page_views').columns(category_id=InfluxQuery.distinct('category_id'))
-        resp = INDBClient(conn=self.client).result_for_query(q)
+        q = indb.q('page_views').columns(category_id=indb.distinct('category_id'))
+        resp = indb.get_result(q, conn=self.client)
         cat_id = list(resp['page_views'])[0].category_id
 
         q = ExampleContinuousQuery().query_for('category', category_id=cat_id)
-        resp = INDBClient(conn=self.client).result_for_query(q)
+        resp = indb.get_result(q, conn=self.client)
         assert len(list(resp['page_views.category.%s' % (cat_id)])[0]) > 0
 
         self.client.write_points([{
@@ -99,5 +102,5 @@ class TestContinuousQueryPlanner(InfluxDBClientTest):
         sleep(2)
 
         q = ExampleContinuousQuery().query_for('category', '1s', category_id=cat_id)
-        resp = INDBClient(conn=self.client).result_for_query(q)
+        resp = indb.get_result(q, conn=self.client)
         assert len(list(resp['1s.page_views.category.%s' % (cat_id)])) > 0
